@@ -785,7 +785,7 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
-      loadProjects();
+      loadProjectsFromDB(); // ✅
       setupEventListeners();
       updateStats();
     });
@@ -809,40 +809,42 @@
 
     // Handle form submission
     function handleSubmit(e) {
-      e.preventDefault();
-      
-      const formData = {
-        id: editingId || Date.now(),
-        name: document.getElementById('projectName').value,
-        client: document.getElementById('clientName').value,
-        type: document.getElementById('projectType').value,
-        budget: parseFloat(document.getElementById('projectBudget').value),
-        status: document.getElementById('projectStatus').value,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        description: document.getElementById('projectDescription').value,
-        createdAt: editingId ? projects.find(p => p.id === editingId).createdAt : new Date().toISOString()
-      };
+    e.preventDefault();
 
-      if (editingId) {
-        // Update existing project
-        const index = projects.findIndex(p => p.id === editingId);
-        if (index !== -1) {
-          projects[index] = formData;
-        }
-      } else {
-        // Add new project
-        projects.push(formData);
-      }
+    const formData = {
+      id: editingId || '',
+      name: document.getElementById('projectName').value,
+      client: document.getElementById('clientName').value,
+      type: document.getElementById('projectType').value,
+      budget: parseFloat(document.getElementById('projectBudget').value),
+      status: document.getElementById('projectStatus').value,
+      startDate: document.getElementById('startDate').value,
+      endDate: document.getElementById('endDate').value,
+      description: document.getElementById('projectDescription').value
+    };
 
-      saveProjects();
+    fetch('save_project.php', {
+      method: 'POST',
+      headers: {
+      'Content-Type': 'application/json'
+    },
+       body: JSON.stringify(formData)
+    })
+      .then(res => res.json())
+      .then(data => {
+      if (data.success) {
+      showMessage(data.message, 'success');
       resetForm();
-      renderProjects();
-      updateStats();
-      
-      // Show success message
-      showMessage(editingId ? 'Proyek berhasil diperbarui!' : 'Proyek berhasil ditambahkan!', 'success');
+      loadProjectsFromDB(); // untuk reload tampilan dari DB
+    } else {
+      showMessage(data.message, 'error');
     }
+    })
+    .catch(err => {
+     console.error(err);
+      showMessage('Terjadi kesalahan saat menyimpan proyek.', 'error');
+    });
+  }
 
     // Reset form
     function resetForm() {
@@ -908,65 +910,76 @@
       renderProjects(filteredProjects);
     }
 
-    // Render projects
     function renderProjects(projectsToRender = projects) {
-      const container = document.getElementById('projectsList');
-      
-      if (projectsToRender.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <i class="fas fa-folder-open"></i>
-            <h3>Belum ada proyek</h3>
-            <p>Mulai dengan menambah proyek baru menggunakan form di sebelah kanan.</p>
-          </div>
-        `;
-        return;
-      }
+  const container = document.getElementById('projectsList');
 
-      container.innerHTML = projectsToRender.map(project => `
-        <div class="project-card fade-in">
-          <div class="project-header">
-            <div>
-              <div class="project-title">${project.name}</div>
-              <div class="project-client">${project.client}</div>
-            </div>
-            <div class="project-actions">
-              <button class="btn btn-warning btn-sm" onclick="editProject(${project.id})">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id})">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
+  if (!Array.isArray(projectsToRender) || projectsToRender.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-folder-open"></i>
+        <h3>Belum ada proyek</h3>
+        <p>Mulai dengan menambah proyek baru menggunakan form di sebelah kanan.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = projectsToRender.map(project => {
+    const name = project.name || 'Tanpa Judul';
+    const client = project.client || '-';
+    const type = project.type || '-';
+    const budget = isNaN(project.budget) ? 0 : Number(project.budget);
+    const status = project.status || 'planning';
+    const endDate = project.endDate || new Date().toISOString();
+    const description = project.description || '';
+
+    return `
+      <div class="project-card fade-in">
+        <div class="project-header">
+          <div>
+            <div class="project-title">${name}</div>
+            <div class="project-client">${client}</div>
           </div>
-          
-          <div class="project-details">
-            <div class="project-detail">
-              <div class="project-detail-label">Jenis</div>
-              <div class="project-detail-value">${project.type}</div>
-            </div>
-            <div class="project-detail">
-              <div class="project-detail-label">Budget</div>
-              <div class="project-detail-value project-budget">Rp ${project.budget.toLocaleString('id-ID')}</div>
-            </div>
-            <div class="project-detail">
-              <div class="project-detail-label">Status</div>
-              <div class="project-detail-value">
-                <span class="status-badge status-${project.status}">
-                  ${getStatusText(project.status)}
-                </span>
-              </div>
-            </div>
-            <div class="project-detail">
-              <div class="project-detail-label">Deadline</div>
-              <div class="project-detail-value">${formatDate(project.endDate)}</div>
-            </div>
+          <div class="project-actions">
+            <button class="btn btn-warning btn-sm" onclick="editProject(${project.id})">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id})">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
-          
-          ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
         </div>
-      `).join('');
-    }
+
+        <div class="project-details">
+          <div class="project-detail">
+            <div class="project-detail-label">Jenis</div>
+            <div class="project-detail-value">${type}</div>
+          </div>
+          <div class="project-detail">
+            <div class="project-detail-label">Budget</div>
+            <div class="project-detail-value project-budget">Rp ${budget.toLocaleString('id-ID')}</div>
+          </div>
+          <div class="project-detail">
+            <div class="project-detail-label">Status</div>
+            <div class="project-detail-value">
+              <span class="status-badge status-${status}">
+                ${getStatusText(status)}
+              </span>
+            </div>
+          </div>
+          <div class="project-detail">
+            <div class="project-detail-label">Deadline</div>
+            <div class="project-detail-value">${formatDate(endDate)}</div>
+          </div>
+        </div>
+
+        ${description ? `<div class="project-description">${description}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+
 
     // Update statistics
     function updateStats() {
@@ -1038,57 +1051,33 @@
       }, 3000);
     }
 
-    // Local storage functions
     function saveProjects() {
-      // In a real app, this would save to a database
-      // For demo purposes, we'll just keep in memory
-    }
+  if (!Array.isArray(projects)) {
+    console.error('Data proyek tidak valid.');
+    return;
+  }
 
-    function loadProjects() {
-      // In a real app, this would load from a database
-      // For demo purposes, we'll start with some sample data
-      projects = [
-        {
-          id: 1,
-          name: 'Website Company Profile PT. Teknologi Maju',
-          client: 'PT. Teknologi Maju',
-          type: 'Website',
-          budget: 5000000,
-          status: 'progress',
-          startDate: '2025-01-01',
-          endDate: '2025-02-15',
-          description: 'Pembuatan website company profile dengan desain modern dan responsive.',
-          createdAt: '2025-01-01T00:00:00.000Z'
-        },
-        {
-          id: 2,
-          name: 'Aplikasi Mobile UMKM Mart',
-          client: 'CV. UMKM Mart',
-          type: 'Mobile App',
-          budget: 15000000,
-          status: 'review',
-          startDate: '2024-12-01',
-          endDate: '2025-01-30',
-          description: 'Aplikasi mobile untuk manajemen toko dan laporan keuangan UMKM.',
-          createdAt: '2024-12-01T00:00:00.000Z'
-        },
-        {
-          id: 3,
-          name: 'Redesign UI/UX E-commerce Fashion',
-          client: 'Toko Fashion Online',
-          type: 'UI/UX Design',
-          budget: 7500000,
-          status: 'completed',
-          startDate: '2024-11-15',
-          endDate: '2024-12-20',
-          description: 'Redesign tampilan dan pengalaman pengguna untuk website e-commerce fashion.',
-          createdAt: '2024-11-15T00:00:00.000Z'
-        }
-      ];
-      
-      renderProjects();
-      updateStats();
+  fetch('save_project.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(projects)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('Proyek berhasil disimpan.');
+    } else {
+      console.error('Gagal menyimpan proyek:', data.message);
     }
+  })
+  .catch(error => {
+    console.error('Terjadi kesalahan saat menyimpan:', error);
+  });
+}
+
+
   </script>
 
   <!-- Footer -->
@@ -1106,9 +1095,9 @@
       <div class="footer-col footer-contact">
         <h3>Kontak</h3>
         <ul>
-          <li><i class="fas fa-phone"></i> <a href="tel:+6281234567890">6304230052</a></li>
-          <li><i class="fas fa-envelope"></i> <a href="mailto:info@devpro.com">Taufiq Rabbani</a></li>
-          <li><i class="fas fa-map-marker-alt"></i> Bengkalis, Indonesia</li>
+          <li><i class="fas fa-phone"></i> <a href="tel:+6281234567890">5657300</a></li>
+          <li><i class="fas fa-envelope"></i> <a href="mailto:info@devpro.com">BlahBlah</a></li>
+          <li><i class="fas fa-map-marker-alt"></i> Earth</li>
         </ul>
       </div>
       <div class="footer-col footer-newsletter">
@@ -1141,60 +1130,103 @@
   </script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const form = document.getElementById('newsletterForm');
-      const messageDiv = document.getElementById('newsletter-message');
+  
+  function loadProjectsFromDB() {
+  fetch('get_projects.php')
+    .then(res => res.json())
+    .then(data => {
+      console.log('Data dari DB:', data); 
 
-      if (form) {
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-
-          const email = form.email.value;
-          const submitButton = form.querySelector('button[type="submit"]');
-
-          // Disable button
-          submitButton.disabled = true;
-          submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-          // Kirim ke PHP
-          fetch('subscribe_newsletter.php', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'email=' + encodeURIComponent(email)
-          })
-          .then(response => response.json())
-          .then(data => {
-            messageDiv.textContent = data.message;
-            messageDiv.style.color = data.success ? '#4cc9f0' : '#f72585';
-
-            if (data.success) {
-              form.reset();
-            }
-
-            // Enable kembali tombol
-            submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
-
-            // Hilangkan pesan setelah 5 detik
-            setTimeout(() => {
-              messageDiv.textContent = '';
-            }, 5000);
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            messageDiv.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
-            messageDiv.style.color = '#f72585';
-
-            submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
-          });
-        });
+      if (data.success && Array.isArray(data.data)) {
+        projects = data.data;
+        renderProjects();
+        updateStats();
+      } else {
+        console.error('Respon data tidak valid:', data);
+        projects = []; // kosongkan untuk menghindari error
+        renderProjects(); // tetap render, akan tampil pesan "tidak ada proyek"
       }
+    })
+    .catch(err => {
+      console.error('Terjadi kesalahan saat mengambil data:', err);
     });
-  </script>
+}
 
+
+  function setupEventListeners() {
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', handleSubmit);
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', handleSearch);
+    }
+
+    // Tanggal default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
+  }
+
+  
+  function updateStats() {
+    document.getElementById('totalProjects').textContent = projects.length;
+    // dst
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Newsletter
+    const form = document.getElementById('newsletterForm');
+    const messageDiv = document.getElementById('newsletter-message');
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const email = form.email.value;
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch('subscribe_newsletter.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'email=' + encodeURIComponent(email)
+        })
+        .then(response => response.json())
+        .then(data => {
+          messageDiv.textContent = data.message;
+          messageDiv.style.color = data.success ? '#4cc9f0' : '#f72585';
+
+          if (data.success) form.reset();
+
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+
+          setTimeout(() => messageDiv.textContent = '', 5000);
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          messageDiv.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
+          messageDiv.style.color = '#f72585';
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        });
+      });
+    }
+
+    // Load & init proyek
+    loadProjectsFromDB();
+    setupEventListeners();
+  });
+</script>
 
 </body>
 </html>
