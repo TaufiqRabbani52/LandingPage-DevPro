@@ -36,7 +36,6 @@
         padding: 0 20px;
     }
 
-    /* Header */
     .header {
         background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         color: white;
@@ -68,7 +67,6 @@
         gap: 15px;
     }
 
-    /* Buttons */
     .btn {
         display: inline-block;
         padding: 12px 24px;
@@ -135,7 +133,6 @@
         font-size: 0.8rem;
     }
 
-    /* Main Content */
     .main-content {
         display: grid;
         grid-template-columns: 1fr 400px;
@@ -143,7 +140,6 @@
         margin-bottom: 50px;
     }
 
-    /* Form Section */
     .form-section {
         background: white;
         padding: 30px;
@@ -195,7 +191,6 @@
         min-height: 100px;
     }
 
-    /* Projects List */
     .projects-section {
         background: white;
         padding: 30px;
@@ -238,7 +233,6 @@
         color: #6c757d;
     }
 
-    /* Project Cards */
     .projects-grid {
         display: grid;
         gap: 20px;
@@ -314,7 +308,6 @@
         margin-bottom: 15px;
     }
 
-    /* Status Badge */
     .status-badge {
         display: inline-block;
         padding: 4px 12px;
@@ -344,7 +337,6 @@
         color: var(--success);
     }
 
-    /* Empty State */
     .empty-state {
         text-align: center;
         padding: 60px 20px;
@@ -362,7 +354,6 @@
         color: var(--dark);
     }
 
-    /* Stats */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -408,7 +399,6 @@
         font-size: 0.9rem;
     }
 
-    /* Footer */
     footer {
         background-color: var(--dark);
         color: white;
@@ -533,7 +523,6 @@
         font-size: 0.9rem;
     }
 
-    /* Back to Top */
     .back-to-top {
         position: fixed;
         bottom: 30px;
@@ -790,7 +779,6 @@
       updateStats();
     });
 
-    // Setup event listeners
     function setupEventListeners() {
       // Form submission
       document.getElementById('projectForm').addEventListener('submit', handleSubmit);
@@ -835,7 +823,7 @@
       if (data.success) {
       showMessage(data.message, 'success');
       resetForm();
-      loadProjectsFromDB(); // untuk reload tampilan dari DB
+      loadProjectsFromDB(); 
     } else {
       showMessage(data.message, 'error');
     }
@@ -864,7 +852,6 @@
       document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
     }
 
-    // Edit project
     function editProject(id) {
       const project = projects.find(p => p.id === id);
       if (!project) return;
@@ -888,7 +875,6 @@
       document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Delete project
     function deleteProject(id) {
       if (confirm('Apakah Anda yakin ingin menghapus proyek ini?')) {
         projects = projects.filter(p => p.id !== id);
@@ -899,7 +885,6 @@
       }
     }
 
-    // Handle search
     function handleSearch() {
       const searchTerm = document.getElementById('searchInput').value.toLowerCase();
       const filteredProjects = projects.filter(project => 
@@ -979,9 +964,6 @@
   }).join('');
 }
 
-
-
-    // Update statistics
     function updateStats() {
       const total = projects.length;
       const progress = projects.filter(p => p.status === 'progress').length;
@@ -1015,7 +997,7 @@
     }
 
     function showMessage(message, type) {
-      // Create message element
+      
       const messageEl = document.createElement('div');
       messageEl.style.cssText = `
         position: fixed;
@@ -1077,10 +1059,8 @@
   });
 }
 
-
   </script>
 
-  <!-- Footer -->
   <footer id="contact">
     <div class="container footer-grid">
       <div class="footer-col footer-about">
@@ -1095,9 +1075,9 @@
       <div class="footer-col footer-contact">
         <h3>Kontak</h3>
         <ul>
-          <li><i class="fas fa-phone"></i> <a href="tel:+6281234567890">5657300</a></li>
-          <li><i class="fas fa-envelope"></i> <a href="mailto:info@devpro.com">BlahBlah</a></li>
-          <li><i class="fas fa-map-marker-alt"></i> Earth</li>
+          <li><i class="fas fa-phone"></i> <a href="tel:+6281234567890">6304230052</a></li>
+          <li><i class="fas fa-envelope"></i> <a href="mailto:info@devpro.com">Taufiq Rabbani</a></li>
+          <li><i class="fas fa-map-marker-alt"></i> Bengkalis, Indonesia, Bumi</li>
         </ul>
       </div>
       <div class="footer-col footer-newsletter">
@@ -1143,8 +1123,8 @@
         updateStats();
       } else {
         console.error('Respon data tidak valid:', data);
-        projects = []; // kosongkan untuk menghindari error
-        renderProjects(); // tetap render, akan tampil pesan "tidak ada proyek"
+        projects = []; 
+        renderProjects(); 
       }
     })
     .catch(err => {
@@ -1175,7 +1155,6 @@
   
   function updateStats() {
     document.getElementById('totalProjects').textContent = projects.length;
-    // dst
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -1222,7 +1201,6 @@
       });
     }
 
-    // Load & init proyek
     loadProjectsFromDB();
     setupEventListeners();
   });
